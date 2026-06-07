@@ -1,0 +1,971 @@
+{% extends "base.html" %}
+{% block title %}Editor{% endblock %}
+
+{% block content %}
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: EDITOR DE CÓDIGO
+     ═══════════════════════════════════════════ -->
+<section id="sec-editor" class="content-section active animate__animated animate__fadeIn">
+    <div class="row g-3">
+        <!-- Editor principal -->
+        <div class="col-12">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="dot dot-red"></span>
+                        <span class="dot dot-yellow"></span>
+                        <span class="dot dot-green"></span>
+                        <span class="ms-2 text-muted small">
+                            <i class="fa-brands fa-python me-1" style="color:#f7c948"></i>main.py
+                        </span>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <span id="editorStatus" class="badge bg-secondary">
+                            <i class="fa-solid fa-circle me-1" style="font-size:0.5rem"></i>Listo
+                        </span>
+                        <button class="btn btn-xs btn-outline-secondary" id="btnLoadExample"
+                                title="Cargar ejemplo">
+                            <i class="fa-solid fa-file-code me-1"></i>Ejemplo
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="editor-wrapper">
+                        <!-- Números de línea -->
+                        <div id="lineNumbers" class="line-numbers" aria-hidden="true">1</div>
+                        <!-- Área de edición -->
+                        <textarea id="codeEditor" class="code-editor"
+                                  spellcheck="false"
+                                  placeholder="# Escribe o pega tu código Python aquí...
+x = 10
+y = 20
+if x < y:
+    print(x)
+while x > 0:
+    x = x - 1"
+                                  autocomplete="off"
+                                  autocorrect="off"
+                                  autocapitalize="off"></textarea>
+                    </div>
+                </div>
+                <div class="card-footer ide-card-footer d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <span id="charCount">0</span> caracteres ·
+                        <span id="lineCount">0</span> líneas
+                    </small>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-danger" id="btnClear2">
+                            <i class="fa-solid fa-trash me-1"></i>Limpiar
+                        </button>
+                        <button class="btn btn-sm btn-success" id="btnAnalyze2">
+                            <i class="fa-solid fa-play me-1"></i>Analizar Código
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: TOKENS
+     ═══════════════════════════════════════════ -->
+<section id="sec-tokens" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="section-title"><i class="fa-solid fa-list-ol me-2 text-info"></i>Tabla de Tokens</h5>
+        <button class="btn btn-sm btn-outline-info" id="btnExportTokens">
+            <i class="fa-solid fa-file-pdf me-1"></i>Exportar PDF
+        </button>
+    </div>
+
+    <!-- Filtro -->
+    <div class="row g-2 mb-3">
+        <div class="col-md-4">
+            <input type="text" id="tokenFilter" class="form-control form-control-sm ide-input"
+                   placeholder="🔍 Filtrar por lexema o token...">
+        </div>
+        <div class="col-md-3">
+            <select id="tokenCatFilter" class="form-select form-select-sm ide-input">
+                <option value="">Todas las categorías</option>
+                <option value="PALABRA_RESERVADA">Palabras Reservadas</option>
+                <option value="IDENTIFICADOR">Identificadores</option>
+                <option value="ENTERO">Enteros</option>
+                <option value="DECIMAL">Decimales</option>
+                <option value="CADENA">Cadenas</option>
+                <option value="OPERADOR">Operadores</option>
+                <option value="DELIMITADOR">Delimitadores</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-hover ide-table" id="tokensTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Línea</th>
+                    <th>Columna</th>
+                    <th>Lexema</th>
+                    <th>Token</th>
+                    <th>Categoría</th>
+                </tr>
+            </thead>
+            <tbody id="tokensBody">
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-5">
+                        <i class="fa-solid fa-play-circle me-2"></i>
+                        Ejecuta el análisis para ver los tokens
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: TABLA DE SÍMBOLOS
+     ═══════════════════════════════════════════ -->
+<section id="sec-symbols" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="section-title"><i class="fa-solid fa-table me-2 text-success"></i>Tabla de Símbolos</h5>
+        <button class="btn btn-sm btn-outline-success" id="btnExportSymbols">
+            <i class="fa-solid fa-file-pdf me-1"></i>Exportar PDF
+        </button>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover ide-table" id="symbolsTable">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>Línea Decl.</th>
+                    <th>Referencias</th>
+                </tr>
+            </thead>
+            <tbody id="symbolsBody">
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-5">
+                        <i class="fa-solid fa-play-circle me-2"></i>
+                        Ejecuta el análisis para ver la tabla de símbolos
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: ÁRBOL SINTÁCTICO
+     ═══════════════════════════════════════════ -->
+<section id="sec-syntax" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="section-title"><i class="fa-solid fa-sitemap me-2 text-warning"></i>Árbol Sintáctico</h5>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-warning" id="btnDownloadTree">
+                <i class="fa-solid fa-download me-1"></i>Descargar PNG
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Visualización del árbol (Graphviz vía viz.js) -->
+        <div class="col-12">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-tree me-2"></i>Visualización del Árbol
+                </div>
+                <div class="card-body" style="min-height:400px; overflow:auto">
+                    <div id="treeSvgContainer" class="text-center text-muted py-5">
+                        <i class="fa-solid fa-tree fa-3x mb-3 opacity-25"></i>
+                        <p>El árbol aparecerá aquí después del análisis</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DOT source -->
+        <div class="col-12">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header d-flex justify-content-between">
+                    <span><i class="fa-solid fa-code me-2"></i>Código DOT (Graphviz)</span>
+                    <button class="btn btn-xs btn-outline-secondary" id="btnCopyDot">
+                        <i class="fa-solid fa-copy me-1"></i>Copiar
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <pre id="dotSource" class="code-pre">// El código DOT aparecerá aquí...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: FIRST / FOLLOW
+     ═══════════════════════════════════════════ -->
+<section id="sec-firstfollow" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <h5 class="section-title mb-3">
+        <i class="fa-solid fa-diagram-project me-2 text-info"></i>Conjuntos FIRST y FOLLOW
+    </h5>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card ide-card h-100">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-arrow-right me-2 text-success"></i>Conjuntos FIRST
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm ide-table mb-0" id="firstTable">
+                        <thead>
+                            <tr><th>No-Terminal</th><th>FIRST(A)</th></tr>
+                        </thead>
+                        <tbody id="firstBody">
+                            <tr><td colspan="2" class="text-muted text-center py-3">
+                                Ejecuta el análisis primero
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card ide-card h-100">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-arrow-left me-2 text-warning"></i>Conjuntos FOLLOW
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm ide-table mb-0" id="followTable">
+                        <thead>
+                            <tr><th>No-Terminal</th><th>FOLLOW(A)</th></tr>
+                        </thead>
+                        <tbody id="followBody">
+                            <tr><td colspan="2" class="text-muted text-center py-3">
+                                Ejecuta el análisis primero
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gramática -->
+        <div class="col-12">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-book me-2 text-primary"></i>Gramática Formal
+                </div>
+                <div class="card-body">
+                    <div id="grammarDisplay" class="grammar-display">
+                        <p class="text-muted">Ejecuta el análisis para ver la gramática</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: TABLA LL(1)
+     ═══════════════════════════════════════════ -->
+<section id="sec-ll1" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <h5 class="section-title mb-3">
+        <i class="fa-solid fa-table-cells me-2 text-primary"></i>Tabla Predictiva LL(1)
+    </h5>
+    <div class="alert alert-info py-2">
+        <i class="fa-solid fa-info-circle me-2"></i>
+        <small>La tabla LL(1) mapea cada (No-Terminal, Terminal) a una producción de la gramática.</small>
+    </div>
+    <div class="table-responsive">
+        <div id="ll1TableContainer">
+            <p class="text-muted text-center py-5">Ejecuta el análisis para ver la tabla LL(1)</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: DERIVACIÓN PASO A PASO
+     ═══════════════════════════════════════════ -->
+<section id="sec-derivation" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <h5 class="section-title mb-3">
+        <i class="fa-solid fa-arrow-right-arrow-left me-2 text-warning"></i>Derivación Paso a Paso
+    </h5>
+    <div class="table-responsive">
+        <table class="table table-sm ide-table" id="derivationTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Pila</th>
+                    <th>Entrada Restante</th>
+                    <th>Producción Aplicada</th>
+                </tr>
+            </thead>
+            <tbody id="derivationBody">
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-5">
+                        Ejecuta el análisis para ver la derivación
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: EXPRESIONES REGULARES
+     ═══════════════════════════════════════════ -->
+<section id="sec-regex" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <h5 class="section-title mb-3">
+        <i class="fa-solid fa-magnifying-glass-chart me-2 text-warning"></i>Expresiones Regulares — Categorías Léxicas
+    </h5>
+    <p class="text-muted small mb-3">
+        Patrones de expresiones regulares utilizados por el analizador léxico para reconocer cada categoría de token en Python.
+        El orden de los patrones es relevante: los más específicos se evalúan primero.
+    </p>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-hover ide-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Categoría</th>
+                    <th>Token</th>
+                    <th>Expresión Regular</th>
+                    <th>Ejemplo</th>
+                    <th>Descripción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-muted">1</td>
+                    <td><span class="badge badge-string">CADENA</span></td>
+                    <td><code style="color:#79c0ff">CADENA</code></td>
+                    <td><code style="color:#7ee787">"[^"\n]*"</code></td>
+                    <td><code style="color:#e3b341">"hola"</code></td>
+                    <td class="text-muted small">Cadena con comillas dobles, sin saltos de línea</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">2</td>
+                    <td><span class="badge badge-string">CADENA</span></td>
+                    <td><code style="color:#79c0ff">CADENA</code></td>
+                    <td><code style="color:#7ee787">'[^'\n]*'</code></td>
+                    <td><code style="color:#e3b341">'mundo'</code></td>
+                    <td class="text-muted small">Cadena con comillas simples, sin saltos de línea</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">3</td>
+                    <td><span class="badge bg-secondary">COMENTARIO</span></td>
+                    <td><code style="color:#79c0ff">(ignorado)</code></td>
+                    <td><code style="color:#7ee787">#[^\n]*</code></td>
+                    <td><code style="color:#e3b341"># esto es un comentario</code></td>
+                    <td class="text-muted small">Comentario de línea; descartado por el lexer</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">4</td>
+                    <td><span class="badge badge-number">DECIMAL</span></td>
+                    <td><code style="color:#79c0ff">DECIMAL</code></td>
+                    <td><code style="color:#7ee787">\d+\.\d+</code></td>
+                    <td><code style="color:#e3b341">3.14</code></td>
+                    <td class="text-muted small">Número con punto decimal (debe evaluarse antes que ENTERO)</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">5</td>
+                    <td><span class="badge badge-number">ENTERO</span></td>
+                    <td><code style="color:#79c0ff">ENTERO</code></td>
+                    <td><code style="color:#7ee787">\d+</code></td>
+                    <td><code style="color:#e3b341">42</code></td>
+                    <td class="text-muted small">Secuencia de uno o más dígitos</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">6</td>
+                    <td><span class="badge badge-operator">OPERADOR</span></td>
+                    <td><code style="color:#79c0ff">==, !=, <=, >=, **, //, -></code></td>
+                    <td><code style="color:#7ee787">==|!=|&lt;=|>=|&lt;&lt;|>>|\*\*|//|-></code></td>
+                    <td><code style="color:#e3b341">== != <=</code></td>
+                    <td class="text-muted small">Operadores de dos caracteres (deben preceder a los simples)</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">7</td>
+                    <td><span class="badge badge-operator">OPERADOR</span></td>
+                    <td><code style="color:#79c0ff">+, -, *, /, =, %, &lt;, ></code></td>
+                    <td><code style="color:#7ee787">[+\-*/=%&lt;>!&amp;|^~]</code></td>
+                    <td><code style="color:#e3b341">+ - * /</code></td>
+                    <td class="text-muted small">Operadores aritméticos, relacionales y de asignación simples</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">8</td>
+                    <td><span class="badge badge-delimiter">DELIMITADOR</span></td>
+                    <td><code style="color:#79c0ff">( ) { } [ ] : , .</code></td>
+                    <td><code style="color:#7ee787">[(){}\[\]:,.]</code></td>
+                    <td><code style="color:#e3b341">( ) :</code></td>
+                    <td class="text-muted small">Paréntesis, llaves, corchetes, dos puntos, coma y punto</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">9</td>
+                    <td><span class="badge badge-identifier">IDENTIFICADOR</span></td>
+                    <td><code style="color:#79c0ff">IDENTIFICADOR / PALABRA_RESERVADA</code></td>
+                    <td><code style="color:#7ee787">[a-zA-Z_][a-zA-Z0-9_]*</code></td>
+                    <td><code style="color:#e3b341">nombre, if, while</code></td>
+                    <td class="text-muted small">Inicia con letra o guión bajo; puede contener dígitos. Si coincide con keyword → PALABRA_RESERVADA</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">10</td>
+                    <td><span class="badge bg-secondary">NUEVA_LÍNEA</span></td>
+                    <td><code style="color:#79c0ff">(control interno)</code></td>
+                    <td><code style="color:#7ee787">\n</code></td>
+                    <td><code style="color:#e3b341">↵</code></td>
+                    <td class="text-muted small">Incrementa el contador de línea; no genera token visible</td>
+                </tr>
+                <tr>
+                    <td class="text-muted">11</td>
+                    <td><span class="badge bg-secondary">ESPACIO</span></td>
+                    <td><code style="color:#79c0ff">(ignorado)</code></td>
+                    <td><code style="color:#7ee787">[ \t\r]+</code></td>
+                    <td><code style="color:#e3b341">·····</code></td>
+                    <td class="text-muted small">Espacios, tabuladores y retornos de carro; descartados</td>
+                </tr>
+                <tr class="table-danger">
+                    <td class="text-muted">12</td>
+                    <td><span class="badge badge-error">ERROR</span></td>
+                    <td><code style="color:#f85149">ERROR_LÉXICO</code></td>
+                    <td><code style="color:#7ee787">.</code></td>
+                    <td><code style="color:#e3b341">@ $ `</code></td>
+                    <td class="text-muted small">Cualquier carácter no reconocido → se registra como error léxico</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Palabras reservadas -->
+    <div class="card ide-card mt-4">
+        <div class="card-header ide-card-header">
+            <i class="fa-solid fa-key me-2 text-warning"></i>Palabras Reservadas (Keywords)
+            <small class="text-muted ms-2">— reconocidas por el patrón de IDENTIFICADOR y verificadas contra la tabla de keywords</small>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                {% for kw in ['if','else','elif','for','while','def','return','class','import','from',
+                               'print','True','False','None','and','or','not','in','is',
+                               'break','continue','pass','try','except','finally','with',
+                               'as','lambda','yield','del','raise','global','nonlocal','assert'] %}
+                <span class="badge badge-keyword px-2 py-1" style="font-size:0.8rem">{{ kw }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: NOTACIÓN BNF
+     ═══════════════════════════════════════════ -->
+<section id="sec-bnf" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <h5 class="section-title mb-3">
+        <i class="fa-solid fa-book-open me-2 text-primary"></i>Notación BNF — Gramática Formal
+    </h5>
+    <p class="text-muted small mb-3">
+        La <strong>Forma de Backus-Naur (BNF)</strong> define formalmente la gramática del subconjunto de Python analizado.
+        Los símbolos entre <code>&lt;angulares&gt;</code> son no-terminales; los demás son terminales.
+        El símbolo <code>ε</code> representa la producción vacía.
+    </p>
+
+    <div class="card ide-card">
+        <div class="card-header ide-card-header">
+            <i class="fa-solid fa-code me-2 text-primary"></i>Gramática en BNF
+        </div>
+        <div class="card-body">
+            <pre class="bnf-display" id="bnfDisplay">
+&lt;programa&gt;              ::= &lt;lista_sentencias&gt;
+
+&lt;lista_sentencias&gt;      ::= &lt;sentencia&gt; &lt;lista_sentencias_rest&gt;
+
+&lt;lista_sentencias_rest&gt; ::= &lt;sentencia&gt; &lt;lista_sentencias_rest&gt;
+                          |  ε
+
+&lt;sentencia&gt;             ::= <span style="color:#79c0ff">ID</span> &lt;sentencia_id&gt;
+                          |  <span style="color:#f85149">if</span> &lt;expresion&gt; <span style="color:#79c0ff">:</span>
+                          |  <span style="color:#f85149">while</span> &lt;expresion&gt; <span style="color:#79c0ff">:</span>
+                          |  <span style="color:#f85149">for</span> <span style="color:#79c0ff">ID</span> <span style="color:#f85149">in</span> &lt;expresion&gt; <span style="color:#79c0ff">:</span>
+                          |  <span style="color:#f85149">def</span> <span style="color:#79c0ff">ID</span> <span style="color:#79c0ff">(</span> &lt;params&gt; <span style="color:#79c0ff">)</span> <span style="color:#79c0ff">:</span>
+                          |  <span style="color:#f85149">return</span> &lt;expresion&gt;
+
+&lt;sentencia_id&gt;          ::= <span style="color:#79c0ff">=</span> &lt;expresion&gt;
+                          |  <span style="color:#79c0ff">(</span> &lt;args&gt; <span style="color:#79c0ff">)</span>
+
+&lt;args&gt;                  ::= &lt;expresion&gt; &lt;args_rest&gt;
+                          |  ε
+
+&lt;args_rest&gt;             ::= <span style="color:#79c0ff">,</span> &lt;expresion&gt; &lt;args_rest&gt;
+                          |  ε
+
+&lt;params&gt;                ::= <span style="color:#79c0ff">ID</span> &lt;params_rest&gt;
+                          |  ε
+
+&lt;params_rest&gt;           ::= <span style="color:#79c0ff">,</span> <span style="color:#79c0ff">ID</span> &lt;params_rest&gt;
+                          |  ε
+
+&lt;expresion&gt;             ::= &lt;termino&gt; &lt;expresion_rest&gt;
+
+&lt;expresion_rest&gt;        ::= <span style="color:#ffa657">OPERADOR</span> &lt;termino&gt;
+                          |  ε
+
+&lt;termino&gt;               ::= <span style="color:#79c0ff">ID</span>
+                          |  <span style="color:#7ee787">ENTERO</span>
+                          |  <span style="color:#7ee787">DECIMAL</span>
+                          |  <span style="color:#e3b341">CADENA</span>
+                          |  <span style="color:#79c0ff">(</span> &lt;expresion&gt; <span style="color:#79c0ff">)</span>
+            </pre>
+        </div>
+    </div>
+
+    <!-- Leyenda -->
+    <div class="card ide-card mt-3">
+        <div class="card-header ide-card-header">
+            <i class="fa-solid fa-circle-info me-2"></i>Leyenda de Colores
+        </div>
+        <div class="card-body d-flex flex-wrap gap-3">
+            <span><code style="color:#58a6ff">&lt;no-terminal&gt;</code> — Símbolo no terminal (regla gramatical)</span>
+            <span><code style="color:#f85149">keyword</code> — Palabra reservada de Python</span>
+            <span><code style="color:#79c0ff">TERMINAL</code> — Terminal/token del lenguaje</span>
+            <span><code style="color:#7ee787">NÚMERO</code> — Literal numérico</span>
+            <span><code style="color:#e3b341">CADENA</code> — Literal de cadena</span>
+            <span><code>ε</code> — Producción vacía (epsilon)</span>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: AUTÓMATAS AFD
+     ═══════════════════════════════════════════ -->
+<section id="sec-automata" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <h5 class="section-title mb-3">
+        <i class="fa-solid fa-circle-nodes me-2 text-success"></i>Autómatas Finitos Deterministas (AFD)
+    </h5>
+
+    <div class="row g-3">
+        <!-- AFD Identificador -->
+        <div class="col-md-6">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-id-badge me-2 text-info"></i>AFD — Identificador
+                    <small class="text-muted ms-2">Patrón: [a-zA-Z_][a-zA-Z0-9_]*</small>
+                </div>
+                <div class="card-body">
+                    <div class="mermaid afd-diagram" id="afd-identifier">
+stateDiagram-v2
+    direction LR
+    [*] --> q0
+    q0 --> q1 : letra/guión_bajo
+    q1 --> q1 : letra/dígito/guión_bajo
+    q1 --> [*] : otro (aceptar)
+    q0 --> qE : dígito/otro
+    qE : Error
+
+    classDef accept fill:#2d6a4f,color:white,stroke:#2d6a4f
+    classDef error fill:#e63946,color:white,stroke:#e63946
+    classDef normal fill:#1e3a5f,color:white,stroke:#457b9d
+    class q1 accept
+    class qE error
+    class q0 normal
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AFD Entero -->
+        <div class="col-md-6">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-hashtag me-2 text-warning"></i>AFD — Entero
+                    <small class="text-muted ms-2">Patrón: [0-9]+</small>
+                </div>
+                <div class="card-body">
+                    <div class="mermaid afd-diagram" id="afd-integer">
+stateDiagram-v2
+    direction LR
+    [*] --> q0
+    q0 --> q1 : dígito
+    q1 --> q1 : dígito
+    q1 --> [*] : otro (aceptar)
+    q0 --> qE : otro
+
+    classDef accept fill:#2d6a4f,color:white,stroke:#2d6a4f
+    classDef error fill:#e63946,color:white,stroke:#e63946
+    classDef normal fill:#1e3a5f,color:white,stroke:#457b9d
+    class q1 accept
+    class qE error
+    class q0 normal
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AFD Decimal -->
+        <div class="col-md-6">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-percent me-2 text-warning"></i>AFD — Decimal
+                    <small class="text-muted ms-2">Patrón: [0-9]+.[0-9]+</small>
+                </div>
+                <div class="card-body">
+                    <div class="mermaid afd-diagram" id="afd-decimal">
+stateDiagram-v2
+    direction LR
+    [*] --> q0
+    q0 --> q1 : dígito
+    q1 --> q1 : dígito
+    q1 --> q2 : punto (.)
+    q2 --> q3 : dígito
+    q3 --> q3 : dígito
+    q3 --> [*] : otro (aceptar)
+    q2 --> qE : otro
+    q0 --> qE : otro
+
+    classDef accept fill:#2d6a4f,color:white,stroke:#2d6a4f
+    classDef error fill:#e63946,color:white,stroke:#e63946
+    classDef normal fill:#1e3a5f,color:white,stroke:#457b9d
+    class q3 accept
+    class qE error
+    class q0,q1,q2 normal
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AFD Cadena -->
+        <div class="col-md-6">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-quote-right me-2 text-success"></i>AFD — Cadena
+                    <small class="text-muted ms-2">Patrón: "[^"]*"</small>
+                </div>
+                <div class="card-body">
+                    <div class="mermaid afd-diagram" id="afd-string">
+stateDiagram-v2
+    direction LR
+    [*] --> q0
+    q0 --> q1 : comilla(")
+    q1 --> q1 : cualquier_char
+    q1 --> q2 : comilla(")
+    q2 --> [*] : aceptar
+    q0 --> qE : otro
+    q1 --> qE : fin_linea
+
+    classDef accept fill:#2d6a4f,color:white,stroke:#2d6a4f
+    classDef error fill:#e63946,color:white,stroke:#e63946
+    classDef normal fill:#1e3a5f,color:white,stroke:#457b9d
+    class q2 accept
+    class qE error
+    class q0,q1 normal
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Máquina Discriminadora -->
+        <div class="col-12">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-network-wired me-2 text-primary"></i>Máquina Discriminadora
+                </div>
+                <div class="card-body">
+                    <div class="mermaid" id="maquina-disc">
+flowchart LR
+    INICIO((INICIO)) --> |letra/guión_bajo| ID([IDENTIFICADOR])
+    INICIO --> |dígito| NUM_CHECK{¿punto?}
+    NUM_CHECK --> |no| INT([ENTERO])
+    NUM_CHECK --> |sí| DEC([DECIMAL])
+    INICIO --> |comilla| STR([CADENA])
+    INICIO --> |+,-,*,/,=,<,>| OP_CHECK{¿doble?}
+    OP_CHECK --> |no| OP1([OPERADOR SIMPLE])
+    OP_CHECK --> |sí| OP2([OPERADOR COMPUESTO])
+    INICIO --> |paren/llave/corchete| DEL([DELIMITADOR])
+    INICIO --> |desconocido| ERR([ERROR LÉXICO])
+
+    style INICIO fill:#1e3a5f,color:white
+    style ID fill:#2d6a4f,color:white
+    style INT fill:#f4a261,color:#1d1d1d
+    style DEC fill:#f4a261,color:#1d1d1d
+    style STR fill:#457b9d,color:white
+    style OP1 fill:#6a0572,color:white
+    style OP2 fill:#6a0572,color:white
+    style DEL fill:#495057,color:white
+    style ERR fill:#e63946,color:white
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: DIAGRAMAS DE CONWAY
+     ═══════════════════════════════════════════ -->
+<section id="sec-conway" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <h5 class="section-title mb-3">
+        <i class="fa-solid fa-project-diagram me-2 text-info"></i>Diagramas de Conway (Sintaxis)
+    </h5>
+    <p class="text-muted small mb-3">
+        Los diagramas de Conway (también llamados diagramas de sintaxis o de ferrocarril)
+        representan visualmente la gramática del lenguaje.
+    </p>
+
+    <div class="row g-3">
+        <!-- Asignación -->
+        <div class="col-md-6">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header text-info">
+                    <i class="fa-solid fa-equals me-2"></i>Asignación
+                </div>
+                <div class="card-body">
+                    <div class="mermaid" id="conway-asig">
+flowchart LR
+    A([●]) --> B[ID]
+    B --> C[=]
+    C --> D{Expresión}
+    D --> E([●])
+    D --> |ID| F[Identificador]
+    D --> |NUM| G[Número]
+    D --> |CADENA| H[Cadena]
+    F --> E
+    G --> E
+    H --> E
+
+    style A fill:#1e3a5f,color:white
+    style E fill:#2d6a4f,color:white
+    style B fill:#457b9d,color:white
+    style C fill:#6a0572,color:white
+    style D fill:#343a40,color:white
+    style F fill:#457b9d,color:white
+    style G fill:#f4a261,color:#1d1d1d
+    style H fill:#e63946,color:white
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expresiones -->
+        <div class="col-md-6">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header text-warning">
+                    <i class="fa-solid fa-calculator me-2"></i>Expresión
+                </div>
+                <div class="card-body">
+                    <div class="mermaid" id="conway-expr">
+flowchart LR
+    A([●]) --> B{Término}
+    B --> |ID| C[Identificador]
+    B --> |NUM| D[Número Entero]
+    B --> |DEC| E[Número Decimal]
+    B --> |STR| F[Cadena]
+    C --> G{¿Operador?}
+    D --> G
+    E --> G
+    F --> G
+    G --> |sí| H[OP]
+    H --> B
+    G --> |no| I([●])
+
+    style A fill:#1e3a5f,color:white
+    style I fill:#2d6a4f,color:white
+    style B fill:#343a40,color:white
+    style G fill:#343a40,color:white
+    style C fill:#457b9d,color:white
+    style H fill:#6a0572,color:white
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- If -->
+        <div class="col-md-6">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header text-success">
+                    <i class="fa-solid fa-code-branch me-2"></i>Sentencia IF
+                </div>
+                <div class="card-body">
+                    <div class="mermaid" id="conway-if">
+flowchart LR
+    A([●]) --> B[if]
+    B --> C{Expresión}
+    C --> D[:]
+    D --> E([●])
+
+    style A fill:#1e3a5f,color:white
+    style E fill:#2d6a4f,color:white
+    style B fill:#e63946,color:white
+    style C fill:#343a40,color:white
+    style D fill:#6a0572,color:white
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- While -->
+        <div class="col-md-6">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header text-warning">
+                    <i class="fa-solid fa-rotate me-2"></i>Sentencia WHILE
+                </div>
+                <div class="card-body">
+                    <div class="mermaid" id="conway-while">
+flowchart LR
+    A([●]) --> B[while]
+    B --> C{Expresión}
+    C --> D[:]
+    D --> E([●])
+    E --> |loop| B
+
+    style A fill:#1e3a5f,color:white
+    style E fill:#2d6a4f,color:white
+    style B fill:#e63946,color:white
+    style C fill:#343a40,color:white
+    style D fill:#6a0572,color:white
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: ERRORES
+     ═══════════════════════════════════════════ -->
+<section id="sec-errors" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <h5 class="section-title mb-3">
+        <i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i>Reporte de Errores
+    </h5>
+
+    <!-- Errores léxicos -->
+    <div class="mb-4">
+        <h6 class="text-danger mb-2">
+            <i class="fa-solid fa-spell-check me-2"></i>Errores Léxicos
+            <span id="lexErrCount" class="badge bg-danger ms-2">0</span>
+        </h6>
+        <div id="lexErrors">
+            <p class="text-muted">No hay errores léxicos.</p>
+        </div>
+    </div>
+
+    <!-- Errores sintácticos -->
+    <div>
+        <h6 class="text-warning mb-2">
+            <i class="fa-solid fa-sitemap me-2"></i>Errores Sintácticos
+            <span id="synErrCount" class="badge bg-warning text-dark ms-2">0</span>
+        </h6>
+        <div id="synErrors">
+            <p class="text-muted">No hay errores sintácticos.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECCIÓN: DASHBOARD
+     ═══════════════════════════════════════════ -->
+<section id="sec-dashboard" class="content-section animate__animated animate__fadeIn" style="display:none">
+    <h5 class="section-title mb-3">
+        <i class="fa-solid fa-gauge-high me-2 text-primary"></i>Dashboard de Resultados
+    </h5>
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card kpi-blue">
+                <div class="card-body text-center py-3">
+                    <div class="kpi-icon"><i class="fa-solid fa-lines-leaning"></i></div>
+                    <div class="kpi-value" id="kpiLines">0</div>
+                    <div class="kpi-label">Líneas</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card kpi-green">
+                <div class="card-body text-center py-3">
+                    <div class="kpi-icon"><i class="fa-solid fa-tags"></i></div>
+                    <div class="kpi-value" id="kpiTokens">0</div>
+                    <div class="kpi-label">Tokens</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card kpi-yellow">
+                <div class="card-body text-center py-3">
+                    <div class="kpi-icon"><i class="fa-solid fa-id-badge"></i></div>
+                    <div class="kpi-value" id="kpiIdentifiers">0</div>
+                    <div class="kpi-label">Identificadores</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card kpi-red">
+                <div class="card-body text-center py-3">
+                    <div class="kpi-icon"><i class="fa-solid fa-bug"></i></div>
+                    <div class="kpi-value" id="kpiErrors">0</div>
+                    <div class="kpi-label">Errores</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Desglose de tokens por categoría -->
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-chart-pie me-2"></i>Desglose por Categoría
+                </div>
+                <div class="card-body">
+                    <div id="categoryBreakdown">
+                        <p class="text-muted">Ejecuta el análisis primero</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-clock me-2"></i>Métricas de Tiempo
+                </div>
+                <div class="card-body">
+                    <div id="timeMetrics">
+                        <p class="text-muted">Ejecuta el análisis primero</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exportación completa -->
+        <div class="col-12">
+            <div class="card ide-card">
+                <div class="card-header ide-card-header">
+                    <i class="fa-solid fa-file-export me-2"></i>Exportar Resultados
+                </div>
+                <div class="card-body d-flex flex-wrap gap-3">
+                    <button class="btn btn-outline-info" id="btnExportTokensD">
+                        <i class="fa-solid fa-file-pdf me-2"></i>Tokens PDF
+                    </button>
+                    <button class="btn btn-outline-success" id="btnExportSymbolsD">
+                        <i class="fa-solid fa-file-pdf me-2"></i>Símbolos PDF
+                    </button>
+                    <button class="btn btn-outline-warning" id="btnExportTreeD">
+                        <i class="fa-solid fa-image me-2"></i>Árbol PNG
+                    </button>
+                    <button class="btn btn-outline-primary" id="btnExportReportD">
+                        <i class="fa-solid fa-file-pdf me-2"></i>Reporte Completo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     OVERLAY DE CARGA
+     ═══════════════════════════════════════════ -->
+<div id="loadingOverlay" class="loading-overlay d-none">
+    <div class="loading-content text-center">
+        <div class="spinner-border text-primary mb-3" role="status" style="width:3rem;height:3rem"></div>
+        <div class="text-white fw-bold">Analizando código...</div>
+        <div class="text-muted small mt-1">Ejecutando análisis léxico y sintáctico</div>
+    </div>
+</div>
+
+{% endblock %}

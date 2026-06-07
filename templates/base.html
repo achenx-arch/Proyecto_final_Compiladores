@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Analizador Python{% endblock %} — CompilerStudio</title>
+
+    <!-- Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <!-- Highlight.js (editor syntax) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="compiler-body">
+
+<!-- ═══════════════════════════════════════════════
+     SIDEBAR NAVIGATION
+     ═══════════════════════════════════════════════ -->
+<nav id="sidebar" class="sidebar d-flex flex-column">
+    <!-- Logo -->
+    <div class="sidebar-header p-3">
+        <div class="d-flex align-items-center gap-2">
+            <div class="logo-icon">
+                <i class="fa-solid fa-code-branch"></i>
+            </div>
+            <div>
+                <div class="fw-bold text-white fs-6">CompilerStudio</div>
+                <div class="text-muted" style="font-size:0.65rem">Python Lexer & Parser</div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <!-- Nav links -->
+    <ul class="nav flex-column px-2 flex-grow-1">
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link active" href="#" data-section="editor">
+                <i class="fa-solid fa-code fa-fw me-2"></i>Editor
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="tokens">
+                <i class="fa-solid fa-list-ol fa-fw me-2"></i>Tokens
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="symbols">
+                <i class="fa-solid fa-table fa-fw me-2"></i>Tabla de Símbolos
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="syntax">
+                <i class="fa-solid fa-sitemap fa-fw me-2"></i>Árbol Sintáctico
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="firstfollow">
+                <i class="fa-solid fa-diagram-project fa-fw me-2"></i>FIRST / FOLLOW
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="ll1">
+                <i class="fa-solid fa-table-cells fa-fw me-2"></i>Tabla LL(1)
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="derivation">
+                <i class="fa-solid fa-arrow-right-arrow-left fa-fw me-2"></i>Derivación
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="regex">
+                <i class="fa-solid fa-magnifying-glass-chart fa-fw me-2"></i>Expresiones Regulares
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="bnf">
+                <i class="fa-solid fa-book-open fa-fw me-2"></i>Notación BNF
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="automata">
+                <i class="fa-solid fa-circle-nodes fa-fw me-2"></i>Autómatas AFD
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="conway">
+                <i class="fa-solid fa-project-diagram fa-fw me-2"></i>Diagramas Conway
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="errors">
+                <i class="fa-solid fa-triangle-exclamation fa-fw me-2"></i>Errores
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link sidebar-link" href="#" data-section="dashboard">
+                <i class="fa-solid fa-gauge-high fa-fw me-2"></i>Dashboard
+            </a>
+        </li>
+    </ul>
+
+    <!-- Footer sidebar -->
+    <div class="p-3 mt-auto">
+        <div class="text-muted" style="font-size:0.65rem">
+            <i class="fa-solid fa-university me-1"></i>UMG Compiladores 2024
+        </div>
+    </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════
+     MAIN CONTENT
+     ═══════════════════════════════════════════════ -->
+<main class="main-content">
+    <!-- Top bar -->
+    <header class="topbar d-flex align-items-center px-4 py-2">
+        <button id="sidebarToggle" class="btn btn-sm btn-outline-secondary me-3">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <span class="text-muted me-auto">
+            <i class="fa-brands fa-python me-1" style="color:#f7c948"></i>
+            <small id="currentSection">Editor de Código</small>
+        </span>
+        <!-- Botones de acción rápida -->
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-warning" id="btnClear" title="Limpiar editor">
+                <i class="fa-solid fa-eraser"></i> Limpiar
+            </button>
+            <button class="btn btn-sm btn-primary" id="btnAnalyze" title="Analizar código">
+                <i class="fa-solid fa-play"></i> Analizar
+            </button>
+        </div>
+    </header>
+
+    <!-- Page content -->
+    <div class="content-area p-3">
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<!-- ═══════════════════════════════════════════════
+     SCRIPTS
+     ═══════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<!-- Mermaid.js para diagramas -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<!-- Viz.js para renderizar DOT en el navegador -->
+<script src="https://unpkg.com/@viz-js/viz@3.5.0/lib/viz-standalone.js"></script>
+
+{% block extra_scripts %}{% endblock %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
