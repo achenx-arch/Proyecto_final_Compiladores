@@ -24,18 +24,17 @@ from flask import (
     send_file, session
 )
 
-# ── Agregar raíz al path para imports relativos ──
+# Agregar raíz al path para imports relativos
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lexer.lexer        import PythonLexer
 from parser.parser      import LL1Parser
 from utils.tree_generator import TreeGenerator
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Configuración de la aplicación
-# ─────────────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
-app.secret_key = 'compilador-umg-2024-secret'
+# Clave secreta configurable por entorno (con valor por defecto para desarrollo)
+app.secret_key = os.environ.get('SECRET_KEY', 'compilador-umg-dev-secret')
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2 MB máximo
 
 # Directorio para reportes y árboles generados
@@ -50,29 +49,21 @@ parser         = LL1Parser()
 tree_generator = TreeGenerator(output_dir=STATIC_IMG)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Ruta Principal
-# ─────────────────────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
     """Sirve la página principal de la aplicación."""
     return render_template('index.html')
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Ruta de Análisis (AJAX)
-# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/healthz')
+def healthz():
+    """Endpoint ligero para monitores de uptime (keep-alive)."""
+    return 'ok', 200
+
+
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    """
-    Ejecuta el análisis léxico y sintáctico sobre el código recibido.
-
-    Body JSON:
-        { "code": "código Python..." }
-
-    Returns:
-        JSON con tokens, tabla de símbolos, errores, árbol y más.
-    """
+    """Ejecuta el análisis léxico y sintáctico sobre el código recibido."""
     data = request.get_json(silent=True)
     if not data or 'code' not in data:
         return jsonify({'error': 'No se recibió código'}), 400
@@ -83,22 +74,20 @@ def analyze():
 
     start_total = time.time()
 
-    # ── Fase 1: Análisis Léxico ──
+    # Fase 1: Análisis Léxico
     lex_result = lexer.tokenize(code)
 
-    # ── Fase 2: Análisis Sintáctico (solo si no hay errores graves) ──
+    # Fase 2: Análisis Sintáctico
     syn_result = {}
     tree_data  = {}
 
     try:
-        # Solo parsear si hay tokens válidos
         valid_tokens = [
             t for t in lex_result['tokens']
             if t['categoria'] not in ('ERROR',)
         ]
         syn_result = parser.parse(valid_tokens)
 
-        # ── Generar árbol sintáctico ──
         if syn_result.get('tree'):
             tree_data = tree_generator.generate(
                 syn_result['tree'],
@@ -117,17 +106,15 @@ def analyze():
 
     elapsed_total = round((time.time() - start_total) * 1000, 2)
 
-    # ── Guardar en sesión para exportaciones ──
     session['last_lex'] = lex_result
     session['last_syn'] = {
         'success':     syn_result.get('success', False),
         'errors':      syn_result.get('errors', []),
         'grammar':     syn_result.get('grammar', {}),
     }
-    session['last_code'] = code[:500]  # Guardar fragmento
+    session['last_code'] = code[:500]
 
     response = {
-        # Análisis léxico
         'tokens':       lex_result['tokens'],
         'symbol_table': lex_result['symbol_table'],
         'lex_errors':   lex_result['errors'],
@@ -135,8 +122,6 @@ def analyze():
             **lex_result['stats'],
             'tiempo_total_ms': elapsed_total,
         },
-
-        # Análisis sintáctico
         'syn_success':  syn_result.get('success', False),
         'syn_errors':   syn_result.get('errors', []),
         'derivations':  syn_result.get('derivations', []),
@@ -144,8 +129,6 @@ def analyze():
         'follow':       syn_result.get('follow', {}),
         'll1_table':    syn_result.get('ll1_table', {}),
         'grammar':      syn_result.get('grammar', {}),
-
-        # Árbol sintáctico
         'tree':         syn_result.get('tree', {}),
         'dot_source':   tree_data.get('dot_source', ''),
         'tree_png_b64': tree_data.get('png_base64', None),
@@ -154,9 +137,6 @@ def analyze():
     return jsonify(response)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Exportación a PDF
-# ─────────────────────────────────────────────────────────────────────────────
 @app.route('/export/tokens', methods=['POST'])
 def export_tokens():
     """Exporta la tabla de tokens a PDF."""
@@ -180,9 +160,6 @@ def export_report():
     return _generate_pdf_report(data)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Descarga de árbol PNG
-# ─────────────────────────────────────────────────────────────────────────────
 @app.route('/tree/download')
 def download_tree():
     """Descarga el árbol sintáctico generado como PNG."""
@@ -192,9 +169,6 @@ def download_tree():
     return jsonify({'error': 'Árbol no generado aún'}), 404
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Helpers PDF con ReportLab
-# ─────────────────────────────────────────────────────────────────────────────
 def _generate_pdf_tokens(tokens: list):
     """Genera PDF con la tabla de tokens."""
     try:
@@ -218,7 +192,6 @@ def _generate_pdf_tokens(tokens: list):
         elements.append(Paragraph('Analizador Léxico — Tabla de Tokens', title_style))
         elements.append(Spacer(1, 0.5*cm))
 
-        # Encabezados
         header = ['#', 'Línea', 'Columna', 'Lexema', 'Token', 'Categoría']
         table_data = [header]
         for t in tokens:
@@ -328,8 +301,6 @@ def _generate_pdf_report(data: dict):
         normal = styles['Normal']
 
         elements = []
-
-        # Portada
         elements.append(Spacer(1, 2*cm))
         elements.append(Paragraph(
             'Reporte de Análisis Léxico y Sintáctico',
@@ -341,7 +312,6 @@ def _generate_pdf_report(data: dict):
         elements.append(HRFlowable(width='100%', color=colors.HexColor('#1e3a5f')))
         elements.append(Spacer(1, 1*cm))
 
-        # Estadísticas
         stats = data.get('stats', {})
         if stats:
             elements.append(Paragraph('Estadísticas del Análisis', heading))
@@ -365,13 +335,12 @@ def _generate_pdf_report(data: dict):
             elements.append(tbl)
             elements.append(Spacer(1, 1*cm))
 
-        # Tokens
         tokens = data.get('tokens', [])
         if tokens:
             elements.append(PageBreak())
             elements.append(Paragraph('Tabla de Tokens', heading))
             token_data = [['#', 'Línea', 'Lexema', 'Token', 'Categoría']]
-            for t in tokens[:100]:  # Max 100 para PDF
+            for t in tokens[:100]:
                 token_data.append([
                     str(t.get('numero','')), str(t.get('linea','')),
                     t.get('lexema',''), t.get('token',''), t.get('categoria','')
@@ -395,13 +364,13 @@ def _generate_pdf_report(data: dict):
         return jsonify({'error': f'Error generando reporte: {e}'}), 500
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Punto de entrada
-# ─────────────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
+    # Configurables por entorno; DEBUG=False por defecto (seguro para entrega)
+    debug = os.environ.get('FLASK_DEBUG', '0') in ('1', 'true', 'True')
+    port  = int(os.environ.get('PORT', 5000))
     print("=" * 60)
     print("  Analizador Léxico y Sintáctico para Python")
     print("  Universidad Mariano Gálvez — Compiladores")
-    print("  http://localhost:5000")
+    print("  http://localhost:" + str(port) + "  (debug=" + str(debug) + ")")
     print("=" * 60)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=debug, host='0.0.0.0', port=port)

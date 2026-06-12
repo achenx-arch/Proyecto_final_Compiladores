@@ -1,7 +1,7 @@
 # Analizador Lexico y Sintactico para Python
 
 Aplicacion web universitaria que simula las fases de un compilador.
-Universidad Mariano Galvez — Compiladores 2024
+Universidad Mariano Galvez — Compiladores 2026
 
 ## Tecnologias
 
@@ -27,6 +27,17 @@ python app.py
 ```
 
 Abrir en el navegador: http://localhost:5000
+
+> El árbol sintáctico se renderiza en el navegador con viz.js, por lo que
+> instalar Graphviz del sistema es **opcional** (solo se usa para exportar el PNG).
+
+### Variables de entorno (opcionales)
+
+| Variable | Por defecto | Descripción |
+|----------|-------------|-------------|
+| `FLASK_DEBUG` | `0` | `1` activa el modo debug de Flask |
+| `SECRET_KEY` | dev key | Clave de sesión para producción |
+| `PORT` | `5000` | Puerto del servidor |
 
 ## Modulos
 
@@ -74,7 +85,7 @@ SENTENCIA             -> ID SENTENCIA_ID | if EXPRESION :
                        | def ID ( PARAMS ) : | return EXPRESION
 SENTENCIA_ID          -> = EXPRESION | ( ARGS )
 EXPRESION             -> TERMINO EXPRESION_REST
-EXPRESION_REST        -> OP TERMINO | e
+EXPRESION_REST        -> OP TERMINO EXPRESION_REST | e
 TERMINO               -> ID | NUM | DECIMAL | CADENA | ( EXPRESION )
 ```
 

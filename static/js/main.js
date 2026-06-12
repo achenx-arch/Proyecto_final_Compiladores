@@ -76,7 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initEditor();
     initSidebar();
     initButtons();
-    renderMermaidDiagrams();
+    // NO renderizar Mermaid aquí: las secciones de diagramas están ocultas
+    // (display:none) al cargar y Mermaid fallaría al medir el texto.
+    // El render se dispara al mostrar cada sección (ver showSection()).
 });
 
 // ════════════════════════════════════════════════════════
@@ -137,7 +139,7 @@ function initSidebar() {
         'tokens':     'Tabla de Tokens',
         'symbols':    'Tabla de Símbolos',
         'syntax':     'Árbol Sintáctico',
-        'firstfollow':'FIRST y FOLLOW',
+        'firstfollow':'PRIMEROS y SIGUIENTES',
         'll1':        'Tabla LL(1)',
         'derivation': 'Derivación Paso a Paso',
         'regex':      'Expresiones Regulares',
@@ -180,9 +182,9 @@ function showSection(name) {
     const sec = document.getElementById(`sec-${name}`);
     if (sec) {
         sec.style.display = 'block';
-        // Reanimar Mermaid al mostrar autómatas/conway
+        // Renderizar Mermaid solo cuando la sección ya es visible (ancho > 0)
         if (name === 'automata' || name === 'conway') {
-            renderMermaidDiagrams();
+            renderMermaidDiagrams(sec);
         }
     }
 }
@@ -483,7 +485,7 @@ async function renderSyntaxTree() {
 // RENDERIZAR FIRST / FOLLOW + GRAMÁTICA
 // ════════════════════════════════════════════════════════
 function renderFirstFollow() {
-    // FIRST
+    // PRIMEROS (FIRST)
     const firstBody = document.getElementById('firstBody');
     if (firstBody) {
         firstBody.innerHTML = Object.entries(State.first)
@@ -495,7 +497,7 @@ function renderFirstFollow() {
             ).join('') || '<tr><td colspan="2" class="text-muted text-center">Sin datos</td></tr>';
     }
 
-    // FOLLOW
+    // SIGUIENTES (FOLLOW)
     const followBody = document.getElementById('followBody');
     if (followBody) {
         followBody.innerHTML = Object.entries(State.follow)
@@ -730,12 +732,31 @@ function setKpi(id, value) {
 // ════════════════════════════════════════════════════════
 // MERMAID DIAGRAMS
 // ════════════════════════════════════════════════════════
-async function renderMermaidDiagrams() {
-    const nodes = document.querySelectorAll('.mermaid:not([data-processed="true"])');
-    if (!nodes.length) return;
+async function renderMermaidDiagrams(root = document) {
+    const nodes = root.querySelectorAll('.mermaid');
+    const pending = [];
+
+    nodes.forEach(node => {
+        // Respaldar el código fuente original la primera vez que se ve el nodo
+        if (!node.dataset.mmdSrc) {
+            node.dataset.mmdSrc = node.textContent.trim();
+        }
+        // Si ya tiene un SVG válido (no de error), no hay que volver a renderizar
+        const yaRenderizado = node.dataset.processed === 'true' &&
+                              node.querySelector('svg') &&
+                              !node.textContent.includes('Syntax error');
+        if (yaRenderizado) return;
+
+        // (Re)preparar el nodo: restaurar la fuente y limpiar el estado previo
+        node.removeAttribute('data-processed');
+        node.innerHTML = node.dataset.mmdSrc;
+        pending.push(node);
+    });
+
+    if (!pending.length) return;
 
     try {
-        await mermaid.run({ nodes: Array.from(nodes) });
+        await mermaid.run({ nodes: pending });
     } catch (e) {
         console.warn('Mermaid render error:', e);
     }

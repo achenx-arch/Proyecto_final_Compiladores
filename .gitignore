@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+reports/
+static/img/syntax_tree
+static/img/syntax_tree.png
+.DS_Store

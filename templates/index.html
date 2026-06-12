@@ -202,22 +202,22 @@ while x > 0:
 </section>
 
 <!-- ═══════════════════════════════════════════
-     SECCIÓN: FIRST / FOLLOW
+     SECCIÓN: PRIMEROS / SIGUIENTES
      ═══════════════════════════════════════════ -->
 <section id="sec-firstfollow" class="content-section animate__animated animate__fadeIn" style="display:none">
     <h5 class="section-title mb-3">
-        <i class="fa-solid fa-diagram-project me-2 text-info"></i>Conjuntos FIRST y FOLLOW
+        <i class="fa-solid fa-diagram-project me-2 text-info"></i>Conjuntos PRIMEROS y SIGUIENTES
     </h5>
     <div class="row g-3">
         <div class="col-md-6">
             <div class="card ide-card h-100">
                 <div class="card-header ide-card-header">
-                    <i class="fa-solid fa-arrow-right me-2 text-success"></i>Conjuntos FIRST
+                    <i class="fa-solid fa-arrow-right me-2 text-success"></i>Conjuntos PRIMEROS
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-sm ide-table mb-0" id="firstTable">
                         <thead>
-                            <tr><th>No-Terminal</th><th>FIRST(A)</th></tr>
+                            <tr><th>No-Terminal</th><th>PRIMEROS(A)</th></tr>
                         </thead>
                         <tbody id="firstBody">
                             <tr><td colspan="2" class="text-muted text-center py-3">
@@ -231,12 +231,12 @@ while x > 0:
         <div class="col-md-6">
             <div class="card ide-card h-100">
                 <div class="card-header ide-card-header">
-                    <i class="fa-solid fa-arrow-left me-2 text-warning"></i>Conjuntos FOLLOW
+                    <i class="fa-solid fa-arrow-left me-2 text-warning"></i>Conjuntos SIGUIENTES
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-sm ide-table mb-0" id="followTable">
                         <thead>
-                            <tr><th>No-Terminal</th><th>FOLLOW(A)</th></tr>
+                            <tr><th>No-Terminal</th><th>SIGUIENTES(A)</th></tr>
                         </thead>
                         <tbody id="followBody">
                             <tr><td colspan="2" class="text-muted text-center py-3">
@@ -504,7 +504,7 @@ while x > 0:
 
 &lt;expresion&gt;             ::= &lt;termino&gt; &lt;expresion_rest&gt;
 
-&lt;expresion_rest&gt;        ::= <span style="color:#ffa657">OPERADOR</span> &lt;termino&gt;
+&lt;expresion_rest&gt;        ::= <span style="color:#ffa657">OPERADOR</span> &lt;termino&gt; &lt;expresion_rest&gt;
                           |  ε
 
 &lt;termino&gt;               ::= <span style="color:#79c0ff">ID</span>
@@ -555,7 +555,7 @@ stateDiagram-v2
     [*] --> q0
     q0 --> q1 : letra/guión_bajo
     q1 --> q1 : letra/dígito/guión_bajo
-    q1 --> [*] : otro (aceptar)
+    q1 --> [*] : aceptar
     q0 --> qE : dígito/otro
     qE : Error
 
@@ -584,7 +584,7 @@ stateDiagram-v2
     [*] --> q0
     q0 --> q1 : dígito
     q1 --> q1 : dígito
-    q1 --> [*] : otro (aceptar)
+    q1 --> [*] : aceptar
     q0 --> qE : otro
 
     classDef accept fill:#2d6a4f,color:white,stroke:#2d6a4f
@@ -612,10 +612,10 @@ stateDiagram-v2
     [*] --> q0
     q0 --> q1 : dígito
     q1 --> q1 : dígito
-    q1 --> q2 : punto (.)
+    q1 --> q2 : punto
     q2 --> q3 : dígito
     q3 --> q3 : dígito
-    q3 --> [*] : otro (aceptar)
+    q3 --> [*] : aceptar
     q2 --> qE : otro
     q0 --> qE : otro
 
@@ -642,9 +642,9 @@ stateDiagram-v2
 stateDiagram-v2
     direction LR
     [*] --> q0
-    q0 --> q1 : comilla(")
+    q0 --> q1 : comilla
     q1 --> q1 : cualquier_char
-    q1 --> q2 : comilla(")
+    q1 --> q2 : comilla
     q2 --> [*] : aceptar
     q0 --> qE : otro
     q1 --> qE : fin_linea
@@ -670,11 +670,11 @@ stateDiagram-v2
                     <div class="mermaid" id="maquina-disc">
 flowchart LR
     INICIO((INICIO)) --> |letra/guión_bajo| ID([IDENTIFICADOR])
-    INICIO --> |dígito| NUM_CHECK{¿punto?}
+    INICIO --> |dígito| NUM_CHECK{punto?}
     NUM_CHECK --> |no| INT([ENTERO])
     NUM_CHECK --> |sí| DEC([DECIMAL])
     INICIO --> |comilla| STR([CADENA])
-    INICIO --> |+,-,*,/,=,<,>| OP_CHECK{¿doble?}
+    INICIO --> |operador| OP_CHECK{doble?}
     OP_CHECK --> |no| OP1([OPERADOR SIMPLE])
     OP_CHECK --> |sí| OP2([OPERADOR COMPUESTO])
     INICIO --> |paren/llave/corchete| DEL([DELIMITADOR])
@@ -969,3 +969,4 @@ flowchart LR
 </div>
 
 {% endblock %}
+       

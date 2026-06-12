@@ -18,7 +18,7 @@ GRAMATICA:
   PARAMS                -> ID PARAMS_REST | e
   PARAMS_REST           -> COMA ID PARAMS_REST | e
   EXPRESION             -> TERMINO EXPRESION_REST
-  EXPRESION_REST        -> OPERADOR TERMINO | e
+  EXPRESION_REST        -> OPERADOR TERMINO EXPRESION_REST | e
   TERMINO               -> ID | ENTERO | DECIMAL | CADENA | PAREN_ABRE EXPRESION PAREN_CIERRA
 """
 
@@ -46,7 +46,7 @@ GRAMMAR = {
     'PARAMS':      [['ID', 'PARAMS_REST'], ['e']],
     'PARAMS_REST': [['COMA', 'ID', 'PARAMS_REST'], ['e']],
     'EXPRESION':      [['TERMINO', 'EXPRESION_REST']],
-    'EXPRESION_REST': [['OPERADOR', 'TERMINO'], ['e']],
+    'EXPRESION_REST': [['OPERADOR', 'TERMINO', 'EXPRESION_REST'], ['e']],
     'TERMINO': [
         ['ID'], ['ENTERO'], ['DECIMAL'], ['CADENA'],
         ['PAREN_ABRE', 'EXPRESION', 'PAREN_CIERRA'],
@@ -167,9 +167,40 @@ class LL1Parser:
                             'produccion': top_symbol + ' -> e (por FOLLOW)',
                         })
                         continue
-                    self._add_error('No hay produccion para (' + top_symbol + ', ' + cur_t + ')', cur)
-                    stack.pop()
+
+                    # Modo panico: recuperacion de error sintactico
+                    self._add_error(
+                        'Se esperaba el inicio de "' + top_symbol +
+                        '" pero se encontro "' + cur_t + '"', cur)
                     success = False
+
+                    first_set = {s for s in self.first.get(top_symbol, set()) if s != 'e'}
+                    sync_set = first_set | follow_set
+
+                    skipped = []
+                    while cur_t not in sync_set and cur_t != '$':
+                        skipped.append(cur_t)
+                        idx += 1
+                        cur = terminal_stream[idx] if idx < len(terminal_stream) \
+                            else {'terminal': '$', 'lexema': '$', 'linea': 0}
+                        cur_t = cur['terminal']
+
+                    if skipped:
+                        self.derivations.append({
+                            'pila': self._stack_str(stack),
+                            'entrada': self._input_str(terminal_stream, idx),
+                            'produccion': 'Recuperacion: se descarto [ ' + ' '.join(skipped) + ' ]',
+                        })
+
+                    if cur_t in first_set:
+                        continue
+
+                    stack.pop()
+                    self.derivations.append({
+                        'pila': self._stack_str(stack),
+                        'entrada': self._input_str(terminal_stream, idx),
+                        'produccion': top_symbol + ' -> e (sincronizacion)',
+                    })
                     continue
 
                 stack.pop()
