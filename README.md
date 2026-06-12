@@ -177,25 +177,6 @@ y Tabla LL(1). No dependen del código; son las mismas para cualquier entrada.
 
 ---
 
-## ✅ Lista de cotejo (20 pts)
-
-| Fase | Aspecto | Pond. |
-|------|---------|-------|
-| Léxico | Categorías léxicas | 1 |
-| Léxico | Expresiones regulares | 2 |
-| Léxico | Autómatas | 1 |
-| Léxico | Máquina discriminadora | 2 |
-| Léxico | Evaluación léxica | 2 |
-| Software | Funcionamiento como analizador léxico | 2 |
-| Software | Funcionamiento como analizador sintáctico | 3 |
-| Software | Control de errores | 2 |
-| Sintáctico | Gramáticas | 1 |
-| Sintáctico | BNF | 2 |
-| Sintáctico | Análisis LL(1) | 1 |
-| Sintáctico | Diagrama de Conway | 1 |
-
----
-
 ## ⚠️ Limitaciones conocidas
 
 - Las llamadas a función son válidas como sentencia (`suma(5, 10)`), no como valor a la

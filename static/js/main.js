@@ -290,6 +290,7 @@ async function runAnalysis() {
         renderDerivations();
         renderErrors();
         renderDashboard();
+        applyDynamicHighlight();
 
         // Estado
         const hasErrors = State.lexErrors.length + State.synErrors.length;
@@ -490,7 +491,7 @@ function renderFirstFollow() {
     if (firstBody) {
         firstBody.innerHTML = Object.entries(State.first)
             .map(([nt, syms]) => `
-                <tr>
+                <tr data-nt="${escHtml(nt)}">
                     <td><code style="color:#58a6ff">${escHtml(nt)}</code></td>
                     <td>${syms.map(s => `<span class="badge badge-operator me-1">${escHtml(s)}</span>`).join('')}</td>
                 </tr>`
@@ -502,7 +503,7 @@ function renderFirstFollow() {
     if (followBody) {
         followBody.innerHTML = Object.entries(State.follow)
             .map(([nt, syms]) => `
-                <tr>
+                <tr data-nt="${escHtml(nt)}">
                     <td><code style="color:#58a6ff">${escHtml(nt)}</code></td>
                     <td>${syms.map(s => `<span class="badge badge-number me-1">${escHtml(s)}</span>`).join('')}</td>
                 </tr>`
@@ -561,7 +562,7 @@ function renderLL1Table() {
                     <td class="nt-col">${escHtml(nt)}</td>
                     ${termArr.map(t => {
                         const prod = State.ll1Table[nt]?.[t] || '';
-                        return `<td class="${prod ? 'has-prod' : ''}" title="${escHtml(prod)}">${escHtml(prod) || ''}</td>`;
+                        return `<td class="${prod ? 'has-prod' : ''}" data-nt="${escHtml(nt)}" data-term="${escHtml(t)}" title="${escHtml(prod)}">${escHtml(prod) || ''}</td>`;
                     }).join('')}
                 </tr>`
             ).join('')}
@@ -898,3 +899,77 @@ function escHtml(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
+
+
+// ════════════════════════════════════════════════════════
+// REALCE DINÁMICO POR EJERCICIO
+// Resalta el subconjunto del lenguaje/gramática que el código
+// actual realmente usó. Las tablas NO cambian; solo se iluminan.
+// ════════════════════════════════════════════════════════
+function applyDynamicHighlight() {
+    // Categorías de token presentes en el código actual
+    const cats = new Set(State.tokens.map(t => t.categoria));
+
+    // No-terminales y celdas (NT, terminal) recorridos en la derivación
+    const usedNT = new Set();
+    const usedCells = new Set();
+    State.derivations.forEach(d => {
+        const m = (d.produccion || '').match(/^([A-Z_]+)\s*->/);
+        if (m) {
+            const nt = m[1];
+            usedNT.add(nt);
+            const look = (d.entrada || '').trim().split(/\s+/)[0] || '';
+            if (look && look !== '...') usedCells.add(nt + '||' + look);
+        }
+    });
+
+    // 1) Expresiones Regulares: resaltar las categorías presentes
+    const regexBody = document.querySelector('#sec-regex table tbody');
+    if (regexBody) {
+        const catByLabel = {
+            'CADENA':'CADENA', 'DECIMAL':'DECIMAL', 'ENTERO':'ENTERO',
+            'OPERADOR':'OPERADOR', 'DELIMITADOR':'DELIMITADOR',
+            'IDENTIFICADOR':'IDENTIFICADOR',
+        };
+        regexBody.querySelectorAll('tr').forEach(tr => {
+            const badge = tr.querySelector('.badge');
+            const label = badge ? badge.textContent.trim() : '';
+            const cat = catByLabel[label];
+            tr.classList.remove('hl-active', 'hl-dim');
+            if (!cat) return;
+            const on = cats.has(cat) ||
+                       (cat === 'IDENTIFICADOR' && cats.has('PALABRA_RESERVADA'));
+            tr.classList.add(on ? 'hl-active' : 'hl-dim');
+        });
+    }
+
+    // 2) Autómatas AFD: resaltar los que se activaron en el código
+    const afdMap = {
+        'afd-identifier': ['IDENTIFICADOR', 'PALABRA_RESERVADA'],
+        'afd-integer':    ['ENTERO'],
+        'afd-decimal':    ['DECIMAL'],
+        'afd-string':     ['CADENA'],
+    };
+    Object.entries(afdMap).forEach(([id, catList]) => {
+        const el = document.getElementById(id);
+        const card = el ? el.closest('.card') : null;
+        if (!card) return;
+        const on = catList.some(c => cats.has(c));
+        card.classList.toggle('hl-active', on);
+        card.classList.toggle('hl-dim', !on);
+    });
+
+    // 3) Tabla LL(1): iluminar las celdas/producciones recorridas
+    document.querySelectorAll('#ll1TableContainer td[data-nt]').forEach(td => {
+        const key = td.getAttribute('data-nt') + '||' + td.getAttribute('data-term');
+        td.classList.toggle('ll1-used', usedCells.has(key));
+    });
+
+    // 4) PRIMEROS / SIGUIENTES: resaltar los no-terminales usados
+    document.querySelectorAll('#firstBody tr[data-nt], #followBody tr[data-nt]').forEach(tr => {
+        const nt = tr.getAttribute('data-nt');
+        tr.classList.remove('hl-active', 'hl-dim');
+        tr.classList.add(usedNT.has(nt) ? 'hl-active' : 'hl-dim');
+    });
+}
+
